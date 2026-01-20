@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import "./App.css"
 import { Movies } from "./componentes/Movies.jsx"
 import { useMovies } from "./hooks/useMovies.js"
+import debounce from "just-debounce-it"
 
 function useSearch() {
 
@@ -38,9 +39,17 @@ function useSearch() {
 
 function App() {
   
+  const [ sort, setSort ] = useState(false)
   const { search, updateSearch, error } = useSearch() 
-  const { movies, getMovie } = useMovies({ search })
+  const { movies, getMovie, loading } = useMovies({ search, sort })
 
+  const debounceGetMovies = useCallback(
+    debounce(search => {
+      console.log("search", search)
+      getMovie({ search })
+    }, 300) 
+    ,[]
+  )
 
   // Formulario para evitar el useRef jsVanilla de forma que dependa
   // del formulario DOM y sus datos
@@ -53,7 +62,12 @@ function App() {
   const handleChange = (event) => {
     const newSearch = event.target.value
     updateSearch(newSearch)
+    debounceGetMovies( newSearch )
   }
+
+  const handleSort = () => {
+    setSort(!sort)
+  }  
 
   return (
   <div className="page">
@@ -61,13 +75,16 @@ function App() {
       <h1>Buscador de peliculas</h1>
       <form className="form" onSubmit={handleSubmit}>
         <input onChange={handleChange} value={search} name="query" placeholder="The Matrix, Pulp Fiction..." />
+        <input type="checkbox"  onChange={handleSort} checked={sort}/>
         <button type="submit">Buscar</button>
-      </form>
+      </form> 
       {error && <p style={{ color: 'red' }}>{error}</p>}
     </header>
 
     <main>
-      <Movies movies={movies} />
+      {
+        loading ? <p>Cargando... </p> : <Movies movies={movies} />
+      }
     </main>
   </div>
   )
